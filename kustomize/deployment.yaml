@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-webhook
+  template:
+    metadata:
+      labels:
+        app: notification-webhook
+    spec:
+      containers:
+        - image: chaunceyshannon/notification-webhook:latest
+          imagePullPolicy: IfNotPresent
+          name: notification-webhook
+
+          resources:
+            requests:
+              memory: "50Mi"
+            limits:
+              memory: "200Mi"
+          
+          volumeMounts:
+            - name: configmap-volume
+              mountPath: /app/notification-webhook.ini
+              subPath: notification-webhook.ini
+
+      volumes:
+        - name: configmap-volume
+          configMap:
+            name: notification-webhook-configmap
