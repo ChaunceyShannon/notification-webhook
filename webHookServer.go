@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	. "github.com/ChaunceyShannon/golanglibs"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,21 +25,21 @@ func (c *webhookServer) init(msgchan chan messageStruct, bind string) {
 	c.bind = bind
 
 	// Disable debug message
-	if !itemInArray(lg.levelString, []string{"trace", "debug"}) {
+	if !Array([]string{"trace", "debug"}).Has(Lg.GetLevel()) {
 		gin.SetMode(gin.ReleaseMode)
 		c.g = gin.New()
 	} else { // Enable debug message
 		c.g = gin.Default()
 		c.g.Use(func(c *gin.Context) {
 			buf, err := ioutil.ReadAll(c.Request.Body)
-			panicerr(err)
+			Panicerr(err)
 
 			request := c.Request.Method + " " + c.Request.RequestURI + " " + c.Request.Proto + "\n"
 			for k, v := range c.Request.Header {
-				request += k + ": " + strJoin(", ", v) + "\n"
+				request += k + ": " + String(", ").Join(v).S + "\n"
 			}
-			request += "\n" + str(buf)
-			lg.trace("Get HTTP request: \n" + request)
+			request += "\n" + Str(buf)
+			Lg.Trace("Get HTTP request: \n" + request)
 
 			rdr := ioutil.NopCloser(bytes.NewBuffer(buf))
 			c.Request.Body = rdr
@@ -53,17 +55,24 @@ func (c *webhookServer) init(msgchan chan messageStruct, bind string) {
 }
 
 func (c *webhookServer) register(path string, msgHandler string, handler func(c *gin.Context) string) {
-	msgHandlerList := strSplit(msgHandler, ",")
+	var msgHandlerListString []string
+	for _, i := range String(msgHandler).Split(",") {
+		msgHandlerListString = append(msgHandlerListString, i.S)
+	}
+
+	Lg.Trace("msgHandler:", msgHandler)
+	Lg.Trace("msgHandlerListString:", msgHandlerListString)
+
 	c.g.POST(path, func(gc *gin.Context) {
 		msg := handler(gc)
 		c.msgchan <- messageStruct{
-			messageHandler: msgHandlerList,
+			messageHandler: msgHandlerListString,
 			message:        msg,
 		}
 	})
 }
 
 func (c *webhookServer) run() {
-	lg.info("Web server started on " + c.bind)
+	Lg.Info("Web server started on " + c.bind)
 	c.g.Run(c.bind)
 }

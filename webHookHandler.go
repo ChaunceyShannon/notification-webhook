@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	. "github.com/ChaunceyShannon/golanglibs"
+
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 )
@@ -11,31 +13,31 @@ import (
 // huawei cloud webhook
 func huaweiCloudWebhook(c *gin.Context) string {
 	body, err := ioutil.ReadAll(c.Request.Body)
-	panicerr(err)
+	Panicerr(err)
 
-	j := getXPathJson(str(body))
-	msg := j.first("//message").text()
-	j = getXPathJson(msg)
-	msg = j.first("//sms_content").text()
+	j := String(body).JsonXPath()
+	msg := j.First("//message").Text()
+	j = msg.JsonXPath()
+	msg = j.First("//sms_content").Text()
 
-	return msg
+	return msg.S
 }
 
 // fluxCD generic webhook
 func fluxcdGenericWebhook(c *gin.Context) string {
 	body, err := ioutil.ReadAll(c.Request.Body)
-	panicerr(err)
+	Panicerr(err)
 
-	j := getXPathJson(str(body))
-	msg := "Severity:   " + j.first("//severity").text() + "\n"
-	msg += "Timestamp:  " + j.first("//timestamp").text() + "\n"
-	msg += "Reason:     " + j.first("//reason").text() + "\n"
-	msg += "Controller: " + j.first("//reportingController").text() + "\n"
+	j := String(body).JsonXPath()
+	msg := "Severity:   " + j.First("//severity").Text().S + "\n"
+	msg += "Timestamp:  " + j.First("//timestamp").Text().S + "\n"
+	msg += "Reason:     " + j.First("//reason").Text().S + "\n"
+	msg += "Controller: " + j.First("//reportingController").Text().S + "\n"
 	msg += "Object:\n"
-	msg += "  Kind: " + j.first("//involvedObject/kind").text() + "\n"
-	msg += "  Namespace: " + j.first("//involvedObject/namespace").text() + "\n"
-	msg += "  Name: " + j.first("//involvedObject/name").text() + "\n\n"
-	msg += j.first("//message").text()
+	msg += "  Kind: " + j.First("//involvedObject/kind").Text().S + "\n"
+	msg += "  Namespace: " + j.First("//involvedObject/namespace").Text().S + "\n"
+	msg += "  Name: " + j.First("//involvedObject/name").Text().S + "\n\n"
+	msg += j.First("//message").Text().S
 
 	return msg
 }
@@ -43,15 +45,17 @@ func fluxcdGenericWebhook(c *gin.Context) string {
 // http post raw webhook
 func httpPostRawWebhook(c *gin.Context) string {
 	body, err := ioutil.ReadAll(c.Request.Body)
-	panicerr(err)
+	Panicerr(err)
 
-	return str(body)
+	Lg.Trace("Body bytes:", body)
+	Lg.Trace("Body:", Str(body))
+	return Str(body)
 }
 
 // http post json
 func httpPostJSONWebhook(c *gin.Context) string {
 	body, err := ioutil.ReadAll(c.Request.Body)
-	panicerr(err)
+	Panicerr(err)
 
 	if json.Valid(body) {
 		b, err := yaml.JSONToYAML(body)
@@ -60,7 +64,7 @@ func httpPostJSONWebhook(c *gin.Context) string {
 		}
 	}
 
-	return str(body)
+	return Str(body)
 }
 
 // Another webhooks

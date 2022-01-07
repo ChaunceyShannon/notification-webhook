@@ -3,6 +3,8 @@ package main
 import (
 	"net/smtp"
 
+	. "github.com/ChaunceyShannon/golanglibs"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -20,14 +22,14 @@ type telegramMessageHandler struct {
 func (c *telegramMessageHandler) init(args map[string]string) {
 	var err error
 	c.telegram, err = tgbotapi.NewBotAPI(args["token"])
-	panicerr(err)
+	Panicerr(err)
 
-	c.chatID = toInt64(args["chatID"])
+	c.chatID = Int64(args["chatID"])
 }
 
 func (c *telegramMessageHandler) send(msg string) {
 	_, err := c.telegram.Send(tgbotapi.NewMessage(c.chatID, msg))
-	panicerr(err)
+	Panicerr(err)
 }
 
 // Slack webhook
@@ -40,9 +42,9 @@ func (c *slackWebhookMessageHandler) init(args map[string]string) {
 }
 
 func (c *slackWebhookMessageHandler) send(msg string) {
-	resp := httpPostJSON(c.url, map[string]string{"text": msg}, httpHeader{"Content-type": "application/json"})
-	if resp.statusCode != 200 {
-		lg.error("Error while sending message with slack webhook:", resp.content)
+	resp := Http.PostJSON(c.url, map[string]string{"text": msg}, HttpHeader{"Content-type": "application/json"})
+	if resp.StatusCode != 200 {
+		Lg.Error("Error while sending message with slack webhook:", resp.Content)
 	}
 }
 
@@ -58,31 +60,31 @@ func (c *slackBotMessageHandler) init(args map[string]string) {
 }
 
 func (c *slackBotMessageHandler) send(msg string) {
-	resp := httpPostJSON("https://slack.com/api/chat.postMessage", map[string]string{"channel": c.chatID, "text": msg}, httpHeader{"Authorization": "Bearer " + c.token})
-	if resp.statusCode != 200 {
-		lg.error("Error while sending message with slack bot:", resp.content)
+	resp := Http.PostJSON("https://slack.com/api/chat.postMessage", map[string]string{"channel": c.chatID, "text": msg}, HttpHeader{"Authorization": "Bearer " + c.token})
+	if resp.StatusCode != 200 {
+		Lg.Error("Error while sending message with slack bot:", resp.Content)
 	}
 }
 
 // matrix user
 type matrixUserMessageHandler struct {
-	cli *matrixStruct
+	cli *MatrixStruct
 }
 
 func (c *matrixUserMessageHandler) init(args map[string]string) {
-	c.cli = getMatrix(args["server"]).setRoomID(args["roomID"])
-	if keyInMap("userid", args) && keyInMap("token", args) {
-		c.cli.setToken(args["userid"], args["token"])
-	} else if keyInMap("username", args) && keyInMap("password", args) {
-		c.cli.login(args["username"], args["password"])
+	c.cli = Tools.Matrix(args["server"]).SetRoomID(args["roomID"])
+	if Map(args).Has("userid") && Map(args).Has("token") {
+		c.cli.SetToken(args["userid"], args["token"])
+	} else if Map(args).Has("username") && Map(args).Has("password") {
+		c.cli.Login(args["username"], args["password"])
 	} else {
-		lg.error("Error while initializing handler \"martixUser\", need (username and password) or (userid and token).")
-		exit(0)
+		Lg.Error("Error while initializing handler \"martixUser\", need (username and password) or (userid and token).")
+		Os.Exit(0)
 	}
 }
 
 func (c *matrixUserMessageHandler) send(msg string) {
-	c.cli.send(msg)
+	c.cli.Send(msg)
 }
 
 // email
@@ -99,31 +101,31 @@ func (c *emailMessageHandler) init(args map[string]string) {
 	c.password = args["password"]
 
 	var toarr []string
-	for _, t := range strSplit(args["to"]) {
-		toarr = append(toarr, strStrip(t))
+	for _, t := range String(args["to"]).Split() {
+		toarr = append(toarr, t.Strip().S)
 	}
 	c.to = toarr
 }
 
 func (c *emailMessageHandler) send(msg string) {
 	var subject string
-	if strIn("\n", msg) {
-		subject = strSplitlines(msg)[0]
-		msg = strJoin("\n", strSplitlines(msg)[1:])
+	if String("\n").In(msg) {
+		subject = String(msg).Splitlines()[0].S
+		msg = String("\n").Join(String(msg).Splitlines()[1:]).S
 	} else {
 		subject = msg
 	}
 
 	msg = "From: " + c.from + "\n" +
-		"To: " + strJoin(",", c.to) + "\n" +
+		"To: " + String(",").Join(c.to).S + "\n" +
 		"Subject: " + subject + "\n\n" +
 		msg
 
-	err := smtp.SendMail("smtp.gmail.com:587",
-		smtp.PlainAuth("", c.from, c.password, "smtp.gmail.com"),
+	err := smtp.SendMail(c.server,
+		smtp.PlainAuth("", c.from, c.password, c.server),
 		c.from, c.to, []byte(msg))
 
-	panicerr(err)
+	Panicerr(err)
 }
 
 // Another handlers

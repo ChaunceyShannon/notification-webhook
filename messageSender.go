@@ -1,5 +1,7 @@
 package main
 
+import . "github.com/ChaunceyShannon/golanglibs"
+
 type messageSender struct {
 	msgchan  chan messageStruct
 	handlers map[string]messageHandler
@@ -14,11 +16,11 @@ func (c *messageSender) init(msgchan chan messageStruct, retry int) {
 
 func (c *messageSender) register(name string, args map[string]string, mh messageHandler) {
 	for {
-		if err := try(func() {
+		if err := Try(func() {
 			mh.init(args)
 		}).Error; err != nil {
-			lg.error("Error while initializing message handler \""+name+"\":", err, ". Retrying...")
-			sleep(3)
+			Lg.Error("Error while initializing message handler \""+name+"\":", err, ". Retrying...")
+			Time.Sleep(3)
 		} else {
 			break
 		}
@@ -28,21 +30,23 @@ func (c *messageSender) register(name string, args map[string]string, mh message
 
 func (c *messageSender) run() {
 	if len(c.handlers) == 0 {
-		lg.error("At least one handler should be enabled.")
-		exit(0)
+		Lg.Error("At least one handler should be enabled.")
+		Os.Exit(0)
 	}
 
 	// Call send function in handler for message
 	for msg := range c.msgchan {
 		for _, mhn := range msg.messageHandler {
-			if keyInMap(strStrip(mhn), c.handlers) {
+			Lg.Trace("mhn:", mhn)
+			Lg.Trace("handlers:", Map(c.handlers).Keys())
+			if Map(c.handlers).Has(String(mhn).Strip().S) {
 				for i := 0; i < c.retry; i++ {
-					if err := try(func() {
-						lg.trace("Sending message with handler \""+mhn+"\":", msg.message)
+					if err := Try(func() {
+						Lg.Trace("Sending message with handler \""+mhn+"\":", msg.message)
 						c.handlers[mhn].send(msg.message)
 					}).Error; err != nil {
-						lg.error("Error while sending message:", err, ". Retrying..."+str(i)+"...")
-						sleep(3)
+						Lg.Error("Error while sending message:", err, ". Retrying..."+Str(i)+"...")
+						Time.Sleep(3)
 					} else {
 						break
 					}
